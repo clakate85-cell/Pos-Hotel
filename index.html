@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ricerca ID POS — Hotel PDC</title>
+<style>
+  :root{
+    --bg: #0b0d0a;
+    --panel: #12140f;
+    --amber: #ffb400;
+    --amber-dim: #8a6300;
+    --green: #6fff8f;
+    --red: #ff5b4d;
+    --grey: #6b6f66;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 3px),
+      var(--bg);
+    color:var(--amber);
+    font-family: 'Courier New', ui-monospace, 'DejaVu Sans Mono', monospace;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 32px 16px 64px;
+  }
+  .board{
+    width:100%;
+    max-width:640px;
+  }
+  .header{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom: 2px solid var(--amber-dim);
+    padding-bottom:10px;
+    margin-bottom:22px;
+    letter-spacing:2px;
+  }
+  .header h1{
+    font-size:15px;
+    font-weight:700;
+    text-transform:uppercase;
+    margin:0;
+  }
+  .header .clock{
+    font-size:13px;
+    color: var(--grey);
+  }
+  .search-row{
+    display:flex;
+    gap:10px;
+    margin-bottom:26px;
+  }
+  #trainInput{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--amber-dim);
+    color:var(--amber);
+    font-family:inherit;
+    font-size:22px;
+    letter-spacing:3px;
+    padding:14px 16px;
+    outline:none;
+  }
+  #trainInput::placeholder{
+    color: var(--amber-dim);
+    letter-spacing:1px;
+  }
+  #trainInput:focus{
+    border-color:var(--amber);
+    box-shadow:0 0 0 1px var(--amber);
+  }
+  button{
+    background:var(--amber);
+    color:#1a1400;
+    border:none;
+    font-family:inherit;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    padding:0 22px;
+    cursor:pointer;
+  }
+  button:active{ transform: translateY(1px); }
+  button:disabled{
+    background: var(--amber-dim);
+    cursor:not-allowed;
+  }
+  .status{
+    font-size:12px;
+    color:var(--grey);
+    letter-spacing:1px;
+    margin-bottom: 18px;
+    min-height:16px;
+  }
+  .result-card{
+    display:none;
+    border:1px solid var(--amber-dim);
+    padding:20px;
+    margin-bottom:14px;
+  }
+  .result-card.show{ display:block; }
+  .result-card .label{
+    font-size:11px;
+    letter-spacing:2px;
+    color:var(--grey);
+    text-transform:uppercase;
+  }
+  .result-card .idpos{
+    font-size:44px;
+    font-weight:700;
+    letter-spacing:2px;
+    color:var(--green);
+    margin: 4px 0 16px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px 20px;
+    font-size:14px;
+  }
+  .grid div span{ display:block; color:var(--grey); font-size:11px; letter-spacing:1px; text-transform:uppercase;}
+  .no-result{
+    display:none;
+    border:1px dashed var(--red);
+    color:var(--red);
+    padding:18px;
+    font-size:14px;
+    letter-spacing:1px;
+  }
+  .no-result.show{ display:block; }
+  .foot{
+    margin-top:30px;
+    font-size:11px;
+    color:var(--grey);
+    letter-spacing:1px;
+    text-align:center;
+  }
+  .foot code{ color:var(--amber-dim); }
+</style>
+</head>
+<body>
+
+<div class="board">
+  <div class="header">
+    <h1>Ricerca ID POS</h1>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+
+  <div class="search-row">
+    <input id="trainInput" type="text" inputmode="numeric" placeholder="N. TRENO" autofocus>
+    <button id="searchBtn">Cerca</button>
+  </div>
+
+  <div class="status" id="status">Caricamento PDF...</div>
+
+  <div class="result-card" id="resultCard">
+    <div class="label">ID POS</div>
+    <div class="idpos" id="idposValue">—</div>
+    <div class="grid">
+      <div><span>Data</span><b id="rDate">—</b></div>
+      <div><span>Hotel</span><b id="rHotel">—</b></div>
+      <div><span>Treno</span><b id="rTreno">—</b></div>
+      <div><span>Ora ingresso</span><b id="rIn">—</b></div>
+      <div><span>Ora uscita</span><b id="rOut">—</b></div>
+    </div>
+  </div>
+
+  <div class="no-result" id="noResult">
+    Nessuna prenotazione trovata per questo treno alla data odierna.
+  </div>
+
+  <div class="foot">
+    File letto: <code id="pdfName">—</code>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// ==== CONFIGURAZIONE ====
+// Nome del file PDF caricato nello stesso repo/cartella di questa pagina.
+const PDF_FILENAME = "HOTEL_PDC.pdf";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+let records = []; // { date: "gg/mm/aaaa", hotel, idpos, treno, in, out }
+
+const statusEl = document.getElementById('status');
+const clockEl = document.getElementById('clock');
+document.getElementById('pdfName').textContent = PDF_FILENAME;
+
+function tickClock(){
+  const now = new Date();
+  clockEl.textContent = now.toLocaleTimeString('it-IT');
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+function todayString(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+
+async function loadPdf(){
+  try{
+    const loadingTask = pdfjsLib.getDocument(PDF_FILENAME);
+    const pdf = await loadingTask.promise;
+    let fullText = "";
+    for(let i=1; i<=pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(it => it.str).join(" ");
+      fullText += " " + pageText;
+    }
+    parseRecords(fullText);
+    statusEl.textContent = `Pronto — ${records.length} prenotazioni caricate.`;
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "Errore nel caricamento del PDF: " + err.message;
+  }
+}
+
+function parseRecords(rawText){
+  const flat = rawText.replace(/\s+/g, " ");
+  // gg/mm/aaaa  HOTEL(testo libero)  IDPOS(6-7 cifre)  TRENO(R-alfanumerico)  hh:mm  hh:mm
+  const re = /(\d{2}\/\d{2}\/\d{4})\s+([A-Za-zÀ-ÿ' \-]+?)\s+(\d{6,7})\s+(R-[A-Za-z0-9]+)\s+(\d{2}:\d{2})\s+(\d{2}:\d{2})/g;
+  let m;
+  records = [];
+  while((m = re.exec(flat)) !== null){
+    records.push({
+      date: m[1],
+      hotel: m[2].trim(),
+      idpos: m[3],
+      treno: m[4],
+      in: m[5],
+      out: m[6]
+    });
+  }
+}
+
+function trenoDigits(trenoStr){
+  const m = trenoStr.match(/(\d+)$/);
+  return m ? m[1] : "";
+}
+
+function doSearch(){
+  const query = document.getElementById('trainInput').value.trim();
+  const resultCard = document.getElementById('resultCard');
+  const noResult = document.getElementById('noResult');
+  resultCard.classList.remove('show');
+  noResult.classList.remove('show');
+
+  if(!query) return;
+
+  const today = todayString();
+  const match = records.find(r => r.date === today && trenoDigits(r.treno) === query);
+
+  if(match){
+    document.getElementById('idposValue').textContent = match.idpos;
+    document.getElementById('rDate').textContent = match.date;
+    document.getElementById('rHotel').textContent = match.hotel;
+    document.getElementById('rTreno').textContent = match.treno;
+    document.getElementById('rIn').textContent = match.in;
+    document.getElementById('rOut').textContent = match.out;
+    resultCard.classList.add('show');
+  } else {
+    noResult.classList.add('show');
+  }
+}
+
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('trainInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter') doSearch();
+});
+
+loadPdf();
+</script>
+
+</body>
+</html>
