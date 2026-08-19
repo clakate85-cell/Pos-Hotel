@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pos_Hotel — Ricerca ID POS</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#16233d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --navy:#16233d;
+    --steel:#2c4870;
+    --paper:#f4f1e9;
+    --paper-2:#eae5d8;
+    --ink:#20242b;
+    --ink-soft:#5b6270;
+    --line:#c9c2ae;
+    --red:#a5332a;
+    --green:#2f6b45;
+    --amber:#a8711f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--navy);
+    background-image:
+      radial-gradient(circle at 15% 0%, #1d2f52 0%, transparent 45%),
+      radial-gradient(circle at 85% 100%, #1d2f52 0%, transparent 45%);
+    font-family:'IBM Plex Sans', sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+
+  header.top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:0 6px 22px;
+    color:#eef0f4;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:40px;height:40px;border-radius:4px;
+    background:linear-gradient(160deg,#3c7a56,#2f6b45);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-weight:600;color:#fff;font-size:13px;
+    box-shadow:0 2px 0 rgba(0,0,0,.25);
+    flex-shrink:0;
+  }
+  .brand h1{font-size:19px;margin:0;font-weight:600;letter-spacing:.2px;}
+  .brand .sub{font-size:12px;color:#a9b2c4;font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+  .clock-pill{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;
+    background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.16);
+    color:#dfe3ea;
+    padding:8px 12px;border-radius:20px;
+    display:flex;align-items:center;gap:8px;
+    flex-shrink:0;
+  }
+  .clock-pill .dot{width:6px;height:6px;border-radius:50%;background:#5fbf7f;}
+
+  .tabs{
+    display:flex;
+    gap:6px;
+    padding:0 6px 14px;
+  }
+  .tab{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    font-weight:600;
+    letter-spacing:1px;
+    color:#a9b2c4;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.14);
+    padding:9px 18px;
+    border-radius:20px 20px 0 0;
+    cursor:pointer;
+    transition:background .12s, color .12s;
+  }
+  .tab:hover{color:#eef0f4;}
+  .tab.active{
+    background:var(--paper);
+    color:var(--steel);
+    border-color:#d8d2c0;
+    border-bottom-color:var(--paper);
+  }
+
+  .sheet{
+    background:var(--paper);
+    border-radius:6px;
+    box-shadow:0 18px 40px rgba(0,0,0,.35);
+    overflow:hidden;
+    border:1px solid #d8d2c0;
+  }
+  .sheet-head{
+    background:var(--steel);
+    color:#fff;
+    padding:16px 24px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .sheet-head .label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;opacity:.75;}
+  .sheet-head .meta{font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  .sheet-head .meta b{font-weight:600;}
+
+  form{padding:22px 24px 8px;}
+
+  .row{display:flex;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+  .field{flex:1 1 160px;min-width:140px;}
+  .field label{
+    display:block;font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:5px;
+  }
+  .field input[type=text],
+  .field input[type=date]{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:#fff;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14.5px;
+    color:var(--ink);
+  }
+  .field input[type=text]{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:20px;
+    letter-spacing:2px;
+  }
+  .field input:focus{
+    outline:2px solid var(--steel);
+    outline-offset:1px;
+  }
+  .field.required label::after{content:" *";color:var(--red);}
+
+  .divider{
+    border:none;border-top:1px dashed var(--line);
+    margin:6px 0 20px;
+  }
+
+  .actions{
+    display:flex;gap:12px;flex-wrap:wrap;
+    padding:2px 0 22px;
+    align-items:center;
+  }
+  button{
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14px;font-weight:600;
+    border:none;border-radius:3px;
+    padding:11px 20px;
+    cursor:pointer;
+    transition:filter .12s, transform .05s;
+  }
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-primary{background:var(--green);color:#fff;}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-ghost{
+    background:transparent;
+    color:var(--ink-soft);
+    border:1px solid var(--line);
+    font-size:11.5px;
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.5px;
+    padding:7px 12px;
+    font-weight:500;
+  }
+  .btn-ghost:hover{color:var(--ink);border-color:var(--ink-soft);}
+  .btn-ghost.spinning{opacity:.6;}
+  .hint{font-size:12px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+
+  .result{
+    background:#fffdf7;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:18px 20px;
+    font-family:'IBM Plex Mono',monospace;
+    color:#33322c;
+    position:relative;
+    margin:0 24px 24px;
+    display:none;
+  }
+  .result.show{display:block;}
+  .result::before{
+    content:"ID POS TROVATO";
+    position:absolute;top:-9px;left:12px;
+    background:var(--paper);
+    padding:0 8px;
+    font-size:10px;letter-spacing:1.5px;
+    color:var(--ink-soft);
+  }
+  .result .idpos{
+    font-size:36px;
+    font-weight:600;
+    color:var(--green);
+    letter-spacing:1px;
+    margin-bottom:14px;
+  }
+  .result .result-count{
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin-bottom:10px;
+  }
+  .result .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px 20px;
+    font-size:13px;
+  }
+  .result .grid span{display:block;color:var(--ink-soft);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;}
+  .result .grid b{font-weight:600;}
+
+  .no-result{
+    background:#fdf3f1;
+    border:1px dashed var(--red);
+    color:var(--red);
+    border-radius:3px;
+    padding:16px 20px;
+    font-size:13.5px;
+    margin:0 24px 24px;
+    display:none;
+  }
+  .no-result.show{display:block;}
+
+  footer.foot{
+    margin-top:22px;
+    text-align:center;
+    font-size:11px;
+    color:#7c869c;
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.5px;
+  }
+  footer.foot code{color:#a9b2c4;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark">POS</div>
+      <div>
+        <h1>Pos_Hotel</h1>
+        <div class="sub">Ricerca ID POS per treno</div>
+      </div>
+    </div>
+    <div class="clock-pill"><span class="dot"></span><span id="clock">--:--:--</span></div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="pdc">PDC</div>
+    <div class="tab" data-tab="pdb">PDB</div>
+  </div>
+
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="label" id="sheetLabel">Registro prenotazioni — PDC</div>
+      <div class="meta" id="status">Caricamento PDF…</div>
+    </div>
+
+    <form onsubmit="return false;">
+      <div class="row">
+        <div class="field required">
+          <label for="trainInput">N. Treno</label>
+          <input id="trainInput" type="text" inputmode="numeric" placeholder="es. 3629" autofocus>
+        </div>
+        <div class="field required">
+          <label for="dateInput">Data</label>
+          <input id="dateInput" type="date">
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="actions">
+        <button class="btn-primary" id="searchBtn">Cerca ID POS</button>
+        <button type="button" class="btn-ghost" id="refreshBtn">↻ Cancella cache</button>
+        <span class="hint" id="countHint"></span>
+      </div>
+    </form>
+
+    <div id="resultsContainer"></div>
+
+    <div class="no-result" id="noResult">
+      Nessuna prenotazione trovata.
+    </div>
+  </div>
+
+  <footer class="foot">File letto: <code id="pdfName">—</code></footer>
+</div>
+
+<script>
+// ==== CONFIGURAZIONE ====
+// Un PDF per tab: aggiungi/rimuovi voci qui per gestire altre schede.
+const TABS = {
+  pdc: { filename: "HOTEL_PDC.pdf", label: "PDC" },
+  pdb: { filename: "HOTEL_PDB.pdf", label: "PDB" }
+};
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+let currentTab = "pdc";
+const recordsByTab = { pdc: [], pdb: [] }; // { date, hotel, idpos, treno, in, out }
+const loadedByTab  = { pdc: false, pdb: false };
+
+const statusEl = document.getElementById('status');
+const clockEl = document.getElementById('clock');
+const countHint = document.getElementById('countHint');
+const sheetLabel = document.getElementById('sheetLabel');
+const pdfNameEl = document.getElementById('pdfName');
+
+function tickClock(){
+  const now = new Date();
+  clockEl.textContent = now.toLocaleTimeString('it-IT');
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+function todayISO(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function isoToItDate(iso){
+  const [y, mo, da] = iso.split('-');
+  return `${da}/${mo}/${y}`;
+}
+
+const dateInput = document.getElementById('dateInput');
+dateInput.value = todayISO();
+
+async function loadPdf(tabId, bustCache){
+  const filename = TABS[tabId].filename;
+  if(tabId === currentTab){
+    statusEl.textContent = "Caricamento PDF…";
+    pdfNameEl.textContent = filename;
+  }
+  try{
+    const url = bustCache ? `${filename}?v=${Date.now()}` : filename;
+    const loadingTask = pdfjsLib.getDocument({ url, httpHeaders: bustCache ? {'Cache-Control':'no-cache'} : undefined });
+    const pdf = await loadingTask.promise;
+    let fullText = "";
+    for(let i=1; i<=pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(it => it.str).join(" ");
+      fullText += " " + pageText;
+    }
+    recordsByTab[tabId] = parseRecords(fullText);
+    loadedByTab[tabId] = true;
+    if(tabId === currentTab){
+      statusEl.innerHTML = `<b>${recordsByTab[tabId].length}</b> prenotazioni`;
+    }
+  }catch(err){
+    console.error(err);
+    loadedByTab[tabId] = false;
+    if(tabId === currentTab){
+      statusEl.textContent = "Errore caricamento PDF";
+      countHint.textContent = err.message;
+    }
+  }
+}
+
+function parseRecords(rawText){
+  const flat = rawText.replace(/\s+/g, " ");
+  const re = /(\d{2}\/\d{2}\/\d{4})\s+([A-Za-zÀ-ÿ' \-]+?)\s+(\d{6,7})\s+(R-[A-Za-z0-9]+)\s+(\d{2}:\d{2})\s+(\d{2}:\d{2})/g;
+  let m;
+  const out = [];
+  while((m = re.exec(flat)) !== null){
+    out.push({
+      date: m[1],
+      hotel: m[2].trim(),
+      idpos: m[3],
+      treno: m[4],
+      in: m[5],
+      out: m[6]
+    });
+  }
+  return out;
+}
+
+function trenoDigits(trenoStr){
+  const m = trenoStr.match(/(\d+)$/);
+  return m ? m[1] : "";
+}
+
+function doSearch(){
+  const query = document.getElementById('trainInput').value.trim();
+  const resultsContainer = document.getElementById('resultsContainer');
+  const noResult = document.getElementById('noResult');
+  resultsContainer.innerHTML = "";
+  noResult.classList.remove('show');
+
+  if(!query){
+    noResult.textContent = "Inserisci un numero di treno.";
+    noResult.classList.add('show');
+    return;
+  }
+  if(!dateInput.value){
+    noResult.textContent = "Seleziona una data.";
+    noResult.classList.add('show');
+    return;
+  }
+
+  const selectedDate = isoToItDate(dateInput.value);
+  const matches = recordsByTab[currentTab].filter(r => r.date === selectedDate && trenoDigits(r.treno) === query);
+  countHint.textContent = `${matches.length} corrispondenza/e trovate`;
+
+  if(matches.length > 0){
+    matches.forEach((m, i) => {
+      const card = document.createElement('div');
+      card.className = 'result show';
+      card.innerHTML = `<div class="result-count">Risultato ${i+1} di ${matches.length}</div>`;
+      card.innerHTML += `
+        <div class="idpos">${m.idpos}</div>
+        <div class="grid">
+          <div><span>Data</span><b>${m.date}</b></div>
+          <div><span>Hotel</span><b>${m.hotel}</b></div>
+          <div><span>Treno</span><b>${m.treno}</b></div>
+          <div><span>Ora ingresso</span><b>${m.in}</b></div>
+          <div><span>Ora uscita</span><b>${m.out}</b></div>
+        </div>
+      `;
+      resultsContainer.appendChild(card);
+    });
+  } else {
+    noResult.textContent = `Nessuna prenotazione trovata per il treno ${query} in data ${selectedDate}.`;
+    noResult.classList.add('show');
+  }
+}
+
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('trainInput').addEventListener('keydown', e => { if(e.key === 'Enter') doSearch(); });
+dateInput.addEventListener('keydown', e => { if(e.key === 'Enter') doSearch(); });
+
+function clearResults(){
+  document.getElementById('resultsContainer').innerHTML = "";
+  document.getElementById('noResult').classList.remove('show');
+  countHint.textContent = "";
+}
+
+document.querySelectorAll('.tab').forEach(tabEl => {
+  tabEl.addEventListener('click', async () => {
+    const tabId = tabEl.dataset.tab;
+    if(tabId === currentTab) return;
+
+    currentTab = tabId;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+    sheetLabel.textContent = `Registro prenotazioni — ${TABS[tabId].label}`;
+    pdfNameEl.textContent = TABS[tabId].filename;
+    clearResults();
+
+    if(loadedByTab[tabId]){
+      statusEl.innerHTML = `<b>${recordsByTab[tabId].length}</b> prenotazioni`;
+    } else {
+      await loadPdf(tabId);
+    }
+    if(document.getElementById('trainInput').value.trim()) doSearch();
+  });
+});
+
+const refreshBtn = document.getElementById('refreshBtn');
+refreshBtn.addEventListener('click', async () => {
+  refreshBtn.disabled = true;
+  refreshBtn.classList.add('spinning');
+  refreshBtn.textContent = '↻ Aggiorno…';
+  await loadPdf(currentTab, true);
+  refreshBtn.disabled = false;
+  refreshBtn.classList.remove('spinning');
+  refreshBtn.textContent = '↻ Cancella cache';
+  if(document.getElementById('trainInput').value.trim()) doSearch();
+});
+
+loadPdf('pdc');
+</script>
+</body>
+</html>
